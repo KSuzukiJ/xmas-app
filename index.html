@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コレジャナイ！クリスマスプレ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #10142e;
+    --fg: #fff8e0;
+    --red: #e83a3a;
+    --green: #3ac26a;
+    --gold: #ffd23f;
+    --dark: #05060f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "DotGothic16", "MS Gothic", "Osaka-Mono", monospace;
+    font-size: 18px;
+    line-height: 1.7;
+    -webkit-font-smoothing: none;
+    font-smooth: never;
+  }
+  #snow { position: fixed; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; z-index: 0; }
+
+  /* CRT風の走査線 */
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 10;
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0, rgba(0,0,0,0) 3px, rgba(0,0,0,.18) 4px);
+  }
+
+  main { position: relative; z-index: 1; max-width: 640px; margin: 0 auto; padding: 20px 16px 48px; }
+
+  h1 {
+    margin: 8px 0 4px; text-align: center; font-weight: normal;
+    font-size: clamp(18px, 5.2vw, 32px); color: var(--gold);
+    text-shadow: 3px 3px 0 var(--red), 6px 6px 0 var(--dark);
+    letter-spacing: .05em;
+  }
+  .sub { text-align: center; margin: 0 0 18px; color: #9fb0ff; font-size: 14px; }
+
+  /* ドット風の枠 */
+  .box {
+    background: var(--dark);
+    border: 4px solid var(--fg);
+    box-shadow:
+      0 0 0 4px var(--dark),
+      0 0 0 8px var(--fg),
+      8px 8px 0 8px rgba(0,0,0,.5);
+    margin: 12px 8px 24px;
+    padding: 14px 16px;
+  }
+
+  .stage { display: flex; gap: 14px; align-items: flex-start; }
+  #santa { width: 112px; height: 112px; flex: none; image-rendering: pixelated; background: #1d2552; border: 4px solid var(--fg); }
+  #santa.talk { animation: hop .25s steps(2) infinite; }
+  @keyframes hop { 50% { transform: translateY(-4px); } }
+
+  #talk { flex: 1; min-height: 112px; font-size: 18px; word-break: break-all; }
+  #talk .name { color: var(--gold); display: block; margin-bottom: 4px; }
+  #talk .cursor { display: inline-block; animation: blink .6s steps(2) infinite; color: var(--gold); }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  label { display: block; margin-bottom: 8px; color: var(--gold); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  input[type=text] {
+    flex: 1 1 200px; min-width: 0;
+    font: inherit; color: var(--fg); background: #000;
+    border: 4px solid var(--green); padding: 8px 10px; outline: none; border-radius: 0;
+  }
+  input[type=text]:focus { border-color: var(--gold); }
+  input::placeholder { color: #667; }
+
+  button {
+    font: inherit; color: #fff; background: var(--red);
+    border: 4px solid var(--fg); border-radius: 0; padding: 8px 16px; cursor: pointer;
+    box-shadow: 4px 4px 0 var(--dark), inset -4px -4px 0 rgba(0,0,0,.3), inset 4px 4px 0 rgba(255,255,255,.3);
+  }
+  button:active { transform: translate(4px, 4px); box-shadow: inset -4px -4px 0 rgba(0,0,0,.3); }
+  button.sub-btn { background: #2d3a8c; }
+  button:disabled { opacity: .5; cursor: default; }
+
+  .samples { margin-top: 12px; font-size: 14px; color: #9fb0ff; }
+  .samples button { font-size: 13px; padding: 2px 8px; margin: 4px 4px 0 0; background: #2d3a8c; border-width: 3px; box-shadow: none; }
+  .tools { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 14px; }
+  .tools button { font-size: 13px; padding: 2px 10px; border-width: 3px; box-shadow: none; background: #2d3a8c; }
+  footer { text-align: center; color: #667; font-size: 12px; }
+
+  @media (max-width: 460px) {
+    body { font-size: 16px; }
+    .stage { flex-direction: column; align-items: center; }
+    #talk { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<canvas id="snow"></canvas>
+<main>
+  <h1>★ コレジャナイ！クリスマスプレ ★</h1>
+  <p class="sub">ほしいプレゼントを サンタさんに つたえよう！</p>
+
+  <section class="box" aria-live="polite">
+    <div class="stage">
+      <canvas id="santa" width="16" height="16" aria-label="サンタクロース"></canvas>
+      <div id="talk"><span class="name">サンタ</span><span id="msg"></span><span class="cursor">▼</span></div>
+    </div>
+  </section>
+
+  <section class="box">
+    <form id="form" autocomplete="off">
+      <label for="wish">▶ ほしいクリスマスプレゼントは？</label>
+      <div class="row">
+        <input type="text" id="wish" maxlength="40" placeholder="例：ポケモンのカード" required>
+        <button type="submit" id="go">つたえる</button>
+      </div>
+    </form>
+    <div class="samples">れい：
+      <span id="samples"></span>
+    </div>
+    <div class="tools">
+      <button type="button" id="again">もういちど聞く</button>
+      <button type="button" id="mute">おと：ON</button>
+    </div>
+  </section>
+
+  <footer>© サンタ工房 — 聞きちがいには 責任を持ちません</footer>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ============ ひらがな → カタカナ ============ */
+  const toKata = s => s.replace(/[ぁ-ゖ]/g, c => String.fromCharCode(c.charCodeAt(0) + 0x60))
+                       .replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+
+  /* ============ 聞きちがい辞書 ============ */
+  // キー：カタカナ正規化した言葉 / 値：サンタの聞きちがい候補（漢字には（読み）を付ける）
+  const DICT = {
+    "ポケモン": ["粉（こな）もん", "ポテトもん", "ぽっけ門"],
+    "カード": ["サンド", "ガード", "カート", "ハート"],
+    "ゲーム": ["ゴム", "下駄（げた）", "ゲンコツ"],
+    "ゲーム機": ["ゴム木", "ゲタ箱"],
+    "ニンテンドースイッチ": ["ニンニクすいとん", "任天堂すっぽん"],
+    "スイッチ": ["すいとん", "スッポン", "ミッチー"],
+    "プレイステーション": ["プリンステーキ", "ブレイクダンス"],
+    "スマホ": ["すもも", "スマップ", "炭火（すみび）"],
+    "ゲーミングパソコン": ["ゲーミングパンツ", "毛（け）ーミング盆栽"],
+    "パソコン": ["パンコン", "パンツ", "葉っぱコン"],
+    "タブレット": ["たぶん鉛筆", "タブーレット", "タピオカレット"],
+    "ニンテンドー": ["ニンニク丼", "任天堂（にんてんどう）"],
+    "レゴ": ["レバー", "ロゴ", "れんげ"],
+    "ブロック": ["ブロッコリー", "ブロマイド", "ブロッケン"],
+    "ぬいぐるみ": ["ぬか漬け", "ぬるぬる"],
+    "人形": ["にんじん", "人魚（にんぎょ）", "ニンニク"],
+    "フィギュア": ["フィッシュ", "ギョウザ", "ふきゅあ"],
+    "ミニカー": ["ミニかに", "ミニカツ", "ミニチュアダックス"],
+    "ラジコン": ["ラジオ体操（たいそう）", "ラーメンコン", "らっきょう"],
+    "自転車": ["自動販売機（じどうはんばいき）", "地団駄（じだんだ）", "自撮り棒（じどりぼう）"],
+    "ボール": ["ホール", "ボーロ", "ポール"],
+    "サッカーボール": ["サッカリン", "サツマボール", "サバ缶ボール"],
+    "サッカー": ["サッカリン", "ざっかー"],
+    "野球": ["焼き芋（やきいも）", "焼き肉（やきにく）"],
+    "グローブ": ["グローブ座", "グロッキー", "くろべえ"],
+    "バット": ["バッタ", "バター", "パット"],
+    "犬": ["稲（いね）", "いか", "イヌイット"],
+    "猫": ["ねぎ", "ネコババ", "ねっこ"],
+    "ペット": ["ペッパー", "ペットボトル", "ベッド"],
+    "ハムスター": ["ハムカツ", "ハンマー", "ハムスタ丼"],
+    "うさぎ": ["うなぎ", "うどん", "ウサイン・ボルト"],
+    "ウサギ": ["うなぎ", "うどん"],
+    "ロボット": ["ロボット掃除機（そうじき）", "ロケット", "ロールパン"],
+    "ロボ": ["ロバ", "ろうそく"],
+    "ドローン": ["どろんこ", "ドローン丼", "トロ～ン"],
+    "ゲームソフト": ["ゲタソフト", "ソフトクリーム"],
+    "マイクラ": ["まいたけ", "マイケル"],
+    "マインクラフト": ["マイタケクラフト", "まいんち工作（こうさく）"],
+    "スプラトゥーン": ["スプラッシュマウンテン", "スパゲッティーン"],
+    "マリオ": ["マリモ", "まりも", "マリトッツォ"],
+    "ゼルダ": ["ぜるだ屋（や）", "セロリだ"],
+    "どうぶつの森": ["どうぶつの味噌（みそ）", "どうぶつの盛（も）り"],
+    "あつまれどうぶつの森": ["あつまれどうぶつの盛（も）り"],
+    "ピカチュウ": ["ピカチュウ煮（に）", "ぴかぴか肘（ひじ）", "ピクルス"],
+    "ドラえもん": ["ドラ焼き（やき）", "どらねこ", "ドラム缶"],
+    "アンパンマン": ["アンパン", "あんまん", "アンコウマン"],
+    "ポケカ": ["ポッキー", "ぽっかぽか"],
+    "ユーチューブ": ["ゆず茶（ちゃ）", "ユーターン"],
+    "ヘッドホン": ["ヘッドロック", "ヘチマ", "へっぴり腰（ごし）"],
+    "イヤホン": ["イヤリング", "いやしん坊（ぼう）", "いかリング"],
+    "時計": ["とけい", "溶（と）けいも", "とっけい"],
+    "腕時計": ["腕（うで）立て伏せ", "うで玉子"],
+    "本": ["ホン", "ポン酢（ず）", "盆（ぼん）"],
+    "マンガ": ["マンゴー", "まんじゅう", "マングース"],
+    "漫画": ["マンゴー", "まんじゅう"],
+    "絵本": ["えび", "えびフライ本"],
+    "ノート": ["ノーパン", "ノリ", "のーと思う"],
+    "鉛筆": ["えんぴ", "円盤（えんばん）"],
+    "リュック": ["リュウキュウ", "りゅうがく", "ルック"],
+    "ランドセル": ["ランドセルリー", "らんちゅう", "ランチセット"],
+    "くつ": ["くじ", "くずもち", "栗（くり）"],
+    "靴": ["くじ", "くず", "ぐっ"],
+    "スニーカー": ["スニッカーズ", "すっぽんカー", "スコーン"],
+    "洋服": ["羊羹（ようかん）", "ようかん"],
+    "服": ["ふく", "福（ふく）引き", "フグ"],
+    "帽子": ["ぼうず", "ぼうし餅（もち）", "ボウリング"],
+    "お金": ["お肩（かた）", "おかか", "おかき"],
+    "おかね": ["おかか", "おかき", "おかゆ"],
+    "お菓子": ["お菓子（かし）パン", "お貸（か）し"],
+    "おもちゃ": ["おちゃ", "おもち", "おでこちゃん"],
+    "プレゼント": ["ペレゼント", "プレゼンテーション"],
+    "カメラ": ["カメ", "かまぼこ", "カメレオン"],
+    "テレビ": ["テレパシー", "手羽先（てばさき）", "ニレビ"],
+    "ピアノ": ["ピアス", "ピーマン", "ピラニア"],
+    "ギター": ["ギョーザ", "ギリギリ", "キター"],
+    "ドラム": ["ドラム缶（かん）", "ドラゴン", "どら焼（や）き"],
+    "バイク": ["バイキング", "バナナ", "バイオリン"],
+    "車": ["くるみ", "くるぶし", "車（くるま）えび"],
+    "電車": ["電卓（でんたく）", "でんでん虫（むし）", "でんぷん"],
+    "新幹線": ["新（しん）サンマ", "新感覚（しんかんかく）", "新感線（しんかんせん）"],
+    "飛行機": ["肥料（ひりょう）", "ひこうき雲（ぐも）", "ヒコーキ芋（いも）"],
+    "プラレール": ["プラスドライバー", "プランクトン", "プラム"],
+    "トミカ": ["トマト", "トミカ屋（や）", "トニカク"],
+    "シルバニア": ["シルバー人材（じんざい）", "シバニャン"],
+    "リカちゃん": ["りんごちゃん", "リッカーちゃん", "ガリガリ君（くん）"],
+    "着せ替え": ["着ぐるみ（きぐるみ）", "切り替え（きりかえ）"],
+    "ケーキ": ["けいき", "ケチャップ", "ケーブル"],
+    "お菓子の家": ["お菓子の穴（あな）", "おかしの井戸（いど）"],
+    "ニンジャ": ["にんじん", "ニンニク"],
+    "ベイブレード": ["ベイルート", "ベーコンブレード", "ベイビーボード"],
+    "ベイブレ": ["ベーグル"],
+    "ガンプラ": ["ガンコ親父（おやじ）", "ガムプラ", "ガンジー"],
+    "ウルトラマン": ["ウルトラ麺（めん）", "うるとら豆（まめ）"],
+    "仮面ライダー": ["火曜（かよう）サスペンス", "かめんライス"],
+    "プリキュア": ["プリンキュア", "プリクラ", "プリンアラモード"],
+    "鬼滅の刃": ["鬼滅の刃（は）ブラシ", "おにぎりの刃"],
+    "呪術廻戦": ["呪術（じゅじゅつ）回転寿司（かいてんずし）"],
+    "ワンピース": ["ワンタン", "ワンピース大盛（おおもり）"],
+    "スイカ": ["スイカ割（わ）り", "スイス", "すいか"],
+    "パジャマ": ["パセリ", "パジャマ寿司（ずし）", "バジル"],
+    "傘": ["かさぶた", "笠地蔵（かさじぞう）", "かさこそ"],
+    "スケートボード": ["スケトウダラ", "スケボー坊（ぼう）や"],
+    "スケボー": ["スケトウダラ", "すっぽんボール"],
+    "キックボード": ["キックバック", "きつねボード"],
+    "水鉄砲": ["水（みず）てっぽう", "水ようかん", "水羊羹（みずようかん）"],
+    "花火": ["鼻血（はなぢ）", "はなび餅（もち）", "はな垂（た）れ"],
+    "望遠鏡": ["望郷（ぼうきょう）ちゃん", "ぼうえんきょう寿司（ずし）"],
+    "顕微鏡": ["けんびき", "県民（けんみん）ショー", "ケンミン鏡（かがみ）"],
+    "図鑑": ["ずかん", "ずっこけ"],
+    "恐竜": ["興味（きょうみ）", "強力（きょうりょく）", "きょうりゅう丼（どん）"],
+    "ゲームのカセット": ["ゲームのカステラ"],
+    "カセット": ["カステラ", "カシューナッツ"],
+    "ポテト": ["ポテチ", "ポテトサラダ"],
+  };
+
+  // 辞書にない言葉用：それっぽくて意味不明な言葉たち
+  const SILLY = [
+    "粉もん", "サンド", "たこ焼き", "ミートボール", "ゴム", "コマ", "シャケ", "サンマ", "ざる蕎麦（そば）",
+    "ナマケモノ", "ガリガリ君（くん）", "ハリセンボン", "ボンゴレ", "ホッケ", "かりんとう", "ししゃも",
+    "ぬか漬け", "カボチャ", "ぬりえ", "ごぼう", "ガチャピン", "コロッケ", "モロッコ", "ビーチサンダル",
+    "しいたけ", "ミミズ", "メロンパン", "しゃもじ", "ばんそうこう", "ハンコ", "ちくわ", "ハムスター",
+    "とうもろこし", "こんにゃく", "ふんどし", "たわし", "アルパカ", "ゴリラ", "はんぺん", "ホッカイロ",
+    "ウインナー", "ざぶとん", "せんべい", "ブーメラン", "かまぼこ", "ミカン", "ペンギン", "ガチョウ",
+    "ちりめんじゃこ", "ハンバーグ", "たくあん", "にんにく", "ふきのとう", "もやし", "ししとう"
+  ];
+
+  // 似た音への置きかえ（カ行→サ行 など）
+  const SOUND_ALIKE = {
+    "カ":"サ","キ":"シ","ク":"ス","ケ":"セ","コ":"ソ",
+    "サ":"カ","シ":"キ","ス":"ク","セ":"ケ","ソ":"コ",
+    "タ":"ナ","チ":"ニ","ツ":"ヌ","テ":"ネ","ト":"ノ",
+    "ナ":"タ","ニ":"チ","ヌ":"ツ","ネ":"テ","ノ":"ト",
+    "ハ":"パ","ヒ":"ピ","フ":"プ","ヘ":"ペ","ホ":"ポ",
+    "パ":"バ","ピ":"ビ","プ":"ブ","ペ":"ベ","ポ":"ボ",
+    "バ":"ハ","ビ":"ヒ","ブ":"フ","ベ":"ヘ","ボ":"ホ",
+    "マ":"ナ","ミ":"ニ","ム":"ヌ","メ":"ネ","モ":"ノ",
+    "ガ":"ダ","ギ":"ジ","グ":"ズ","ゲ":"ゼ","ゴ":"ゾ",
+    "ダ":"ガ","ジ":"ギ","ズ":"グ","ゼ":"ゲ","ゾ":"ゴ",
+    "ラ":"ダ","リ":"ジ","ル":"ズ","レ":"デ","ロ":"ド",
+    "ア":"ワ","イ":"ヰ","ウ":"ブ","エ":"ヱ","オ":"ホ",
+    "ヤ":"マ","ユ":"ム","ヨ":"モ","ワ":"ア","ン":"ム"
+  };
+  const MUTABLE = Object.keys(SOUND_ALIKE);
+  const EXTRA_TAILS = ["丼（どん）", "焼（や）き", "せんべい", "ぱん", "餅（もち）", "の素（もと）", "サンド", "マン"];
+
+  // 辞書の長いキーから順に探す
+  const KEYS = Object.keys(DICT).sort((a, b) => b.length - a.length);
+  const KATA_KEYS = KEYS.map(k => [k, toKata(k)]);
+
+  const rnd = n => Math.floor(Math.random() * n);
+  const pick = a => a[rnd(a.length)];
+
+  // 似ている度（文字の重なり＋頭/おしりの一致）
+  function similarity(a, b) {
+    const A = toKata(a).replace(/（.*?）/g, ""), B = toKata(b).replace(/（.*?）/g, "");
+    let s = 0;
+    for (const c of new Set(A)) if (B.includes(c)) s += 1;
+    if (A[0] === B[0]) s += 2;
+    if (A[A.length - 1] === B[B.length - 1]) s += 2;
+    return s - Math.abs(A.length - B.length) * 0.3;
+  }
+
+  function mutate(word) {
+    const chars = [...toKata(word)];
+    const idx = chars.map((c, i) => MUTABLE.includes(c) ? i : -1).filter(i => i >= 0);
+    let changed = 0;
+    const n = Math.min(idx.length, chars.length > 4 ? 2 : 1);
+    for (let k = 0; k < n; k++) {
+      const j = idx.splice(rnd(idx.length), 1)[0];
+      chars[j] = SOUND_ALIKE[chars[j]]; changed++;
+    }
+    let out = chars.join("");
+    if (!changed || out === toKata(word)) out += pick(EXTRA_TAILS);
+    return out;
+  }
+
+  function mishearUnknown(word) {
+    const hasKanji = /[一-鿿]/.test(word);
+    if (hasKanji || Math.random() < 0.4) {
+      // 似ているおかしな言葉を探す
+      const ranked = SILLY.map(w => [w, similarity(word, w)]).sort((a, b) => b[1] - a[1]).slice(0, 4);
+      return pick(ranked)[0];
+    }
+    return mutate(word);
+  }
+
+  // 1語（「の」などで区切られた1パーツ）を聞きちがえる
+  function mishearPart(part) {
+    const kata = toKata(part);
+    if (!kata) return part;
+    // 辞書の言葉を（長い順に）置きかえ
+    let out = "", rest = kata, hit = false;
+    while (rest.length) {
+      const found = KATA_KEYS.find(([, nk]) => rest.startsWith(nk));
+      if (found) { out += pick(DICT[found[0]]); rest = rest.slice(toKata(found[0]).length); hit = true; }
+      else { out += rest[0]; rest = rest.slice(1); }
+    }
+    if (hit) return out;
+    return mishearUnknown(part);
+  }
+
+  function mishear(raw) {
+    let t = raw.trim()
+      .replace(/^(サンタさん|さんたさん|サンタ)[、,，\s]*/, "")
+      .replace(/(クリスマス)?(プレゼント)?(に|は)?\s*(が|を)?\s*(欲しい|ほしい|ホシイ|下さい|ください|くれ|ちょうだい|頂戴).*$/, "")
+      .replace(/(が|を|は)$/, "")
+      .trim();
+    if (!t) t = raw.trim();
+    // 全体で辞書ヒット（「ニンテンドースイッチ」など）を優先、なければ「の」「・」等で分割
+    const whole = toKata(t);
+    const wholeHit = KATA_KEYS.find(([, nk]) => nk === whole);
+    if (wholeHit) return pick(DICT[wholeHit[0]]);
+    const parts = t.split(/(の|・|、|,|\s+)/);
+    const res = parts.map((p, i) => (i % 2 === 1 || !p.trim()) ? (p.trim() ? p : "") : mishearPart(p)).join("");
+    return res === t ? res + pick(EXTRA_TAILS) : res;
+  }
+
+  /* ============ 画面まわり ============ */
+  const $ = id => document.getElementById(id);
+  const msg = $("msg"), santa = $("santa"), form = $("form"), wish = $("wish");
+  let timer = null, lastWish = "";
+
+  /* ドット絵サンタ（16x16） */
+  const PAL = { R:"#e83a3a", W:"#ffffff", S:"#ffc9a0", K:"#1a1a1a", G:"#ffd23f", D:"#a82020" };
+  const SANTA_MAP = [
+    ".....RRRRRR.....",
+    "....RRRRRRRR....",
+    "...RRRRRRRRRR...",
+    "...RRRRRRRRRRWW.",
+    "..WWWWWWWWWWWWW.",
+    "..WWSSSSSSSSWW..",
+    "..WWSKSSSSKSWW..",
+    "..WWSSSSSSSSWW..",
+    "..WWWWSSSSWWWW..",
+    "...WWWWWWWWWW...",
+    "..RRWWWWWWWWRR..",
+    ".RRRRRGGGGRRRRR.",
+    ".RRRRRRRRRRRRRR.",
+    ".RRSSRRRRRRSSRR.",
+    "..RRRRRRRRRRRR..",
+    "..KKKK....KKKK.."
+  ];
+  (function drawSanta() {
+    const g = santa.getContext("2d");
+    SANTA_MAP.forEach((row, y) => [...row.padEnd(16, ".").slice(0, 16)].forEach((c, x) => {
+      if (PAL[c]) { g.fillStyle = PAL[c]; g.fillRect(x, y, 1, 1); }
+    }));
+  })();
+
+  /* ピコピコ音 */
+  let actx = null, soundOn = true;
+  function blip(freq = 520) {
+    if (!soundOn) return;
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = "square"; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.04, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 0.07);
+      o.connect(g).connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + 0.08);
+    } catch (e) {}
+  }
+  function jingle() {
+    [660, 784, 988, 1319].forEach((f, i) => setTimeout(() => blip(f), i * 90));
+  }
+
+  function say(text, withJingle) {
+    clearInterval(timer);
+    msg.textContent = "";
+    santa.classList.add("talk");
+    const chars = [...text];
+    let i = 0;
+    timer = setInterval(() => {
+      msg.textContent += chars[i++];
+      if (i % 2 === 0) blip(480 + rnd(3) * 60);
+      if (i >= chars.length) {
+        clearInterval(timer);
+        santa.classList.remove("talk");
+        if (withJingle) jingle();
+      }
+    }, 55);
+  }
+
+  function reply(w) {
+    const heard = mishear(w);
+    say(`${heard}が欲しいんだね。わかったよ。クリスマスを楽しみにしてね。ホーホーホー！`, true);
+  }
+
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    const w = wish.value.trim();
+    if (!w) { say("なにが ほしいのか おしえておくれ！"); return; }
+    lastWish = w;
+    reply(w);
+  });
+  $("again").addEventListener("click", () => {
+    if (lastWish) reply(lastWish); else say("まだ なにも きいていないよ。ほしいものを おしえておくれ！");
+  });
+  $("mute").addEventListener("click", e => {
+    soundOn = !soundOn; e.target.textContent = "おと：" + (soundOn ? "ON" : "OFF");
+  });
+
+  ["ポケモンのカード", "ニンテンドースイッチ", "レゴ", "自転車", "ぬいぐるみ", "プレイステーション"].forEach(s => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = s;
+    b.addEventListener("click", () => { wish.value = s; form.requestSubmit(); });
+    $("samples").appendChild(b);
+  });
+
+  say("ホーホーホー！ メリークリスマス！ ほしいプレゼントを おしえておくれ。");
+
+  /* ============ 雪（ドット） ============ */
+  const cv = $("snow"), cg = cv.getContext("2d");
+  const PIX = 4;
+  let flakes = [];
+  function resize() {
+    cv.width = Math.ceil(innerWidth / PIX); cv.height = Math.ceil(innerHeight / PIX);
+    flakes = Array.from({ length: Math.floor(cv.width * cv.height / 260) }, () => ({
+      x: Math.random() * cv.width, y: Math.random() * cv.height, v: .1 + Math.random() * .25, s: Math.random() < .2 ? 2 : 1
+    }));
+  }
+  addEventListener("resize", resize); resize();
+  (function loop() {
+    cg.clearRect(0, 0, cv.width, cv.height);
+    cg.fillStyle = "#cfe0ff";
+    for (const f of flakes) {
+      f.y += f.v; f.x += Math.sin(f.y / 7) * .1;
+      if (f.y > cv.height) { f.y = -2; f.x = Math.random() * cv.width; }
+      cg.fillRect(f.x | 0, f.y | 0, f.s, f.s);
+    }
+    requestAnimationFrame(loop);
+  })();
+})();
+</script>
+</body>
+</html>
