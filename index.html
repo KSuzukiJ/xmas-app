@@ -124,7 +124,7 @@
       <span id="samples"></span>
     </div>
     <div class="tools">
-      <button type="button" id="again">もういちど聞く</button>
+      <button type="button" id="again">クリア</button>
       <button type="button" id="mute">おと：ON</button>
     </div>
   </section>
@@ -440,13 +440,15 @@
     reply(w);
   });
   $("again").addEventListener("click", () => {
-    if (lastWish) reply(lastWish); else say("まだ なにも きいていないよ。ほしいものを おしえておくれ！");
+    wish.value = "";
+    wish.focus();
+    say("ほかに ほしいものは あるかい？ もういちど おしえておくれ。");
   });
   $("mute").addEventListener("click", e => {
     soundOn = !soundOn; e.target.textContent = "おと：" + (soundOn ? "ON" : "OFF");
   });
 
-  ["ポケモンのカード", "ニンテンドースイッチ", "レゴ", "自転車", "ぬいぐるみ", "プレイステーション"].forEach(s => {
+  ["ポケモンカード", "ニンテンドースイッチ２", "レゴ", "自転車", "ぬいぐるみ", "プレイステーション"].forEach(s => {
     const b = document.createElement("button");
     b.type = "button"; b.textContent = s;
     b.addEventListener("click", () => { wish.value = s; form.requestSubmit(); });
